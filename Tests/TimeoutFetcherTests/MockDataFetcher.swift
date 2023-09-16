@@ -9,7 +9,7 @@ import RxSwift
 
 struct MockDataFetcher: DataFetcherProtocol {
     let result: Result<String, Error>
-    let delay: RxTimeInterval
+    var delay: RxTimeInterval = .never
 
     func fetch() -> Observable<String> {
         switch result {
