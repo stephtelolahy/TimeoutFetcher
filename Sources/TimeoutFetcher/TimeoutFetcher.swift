@@ -4,14 +4,14 @@
 import RxSwift
 
 struct MyService {
-    let api: DataFetcherProtocol
+    let remote: DataFetcherProtocol
     let cache: DataFetcherProtocol
 
     func getData() -> Observable<String> {
-        let apiFetch = api.fetch()
+        let remoteFetch = remote.fetch()
         let cacheLoad = cache.fetch()
 
-        return Observable.amb([apiFetch, cacheLoad])
+        return Observable.amb([remoteFetch, cacheLoad])
     }
 }
 
