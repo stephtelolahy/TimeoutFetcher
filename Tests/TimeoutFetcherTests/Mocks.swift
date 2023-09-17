@@ -7,9 +7,14 @@
 @testable import TimeoutFetcher
 import RxSwift
 
-struct MockDataFetcher: DataFetcherProtocol {
+class MockDataFetcher: DataFetcherProtocol {
     let result: Result<String, Error>
-    var delay: RxTimeInterval = .never
+    let delay: RxTimeInterval
+
+    init(result: Result<String, Error>, delay: RxTimeInterval = .never) {
+        self.result = result
+        self.delay = delay
+    }
 
     func fetch() -> Observable<String> {
         switch result {
@@ -18,8 +23,24 @@ struct MockDataFetcher: DataFetcherProtocol {
                 .delay(delay, scheduler: MainScheduler.instance)
         case .failure(let error):
             Observable.error(error)
-                .delay(delay, scheduler: MainScheduler.instance)
         }
+    }
+}
+
+class MockLocalStorage: LocalStorageProtocol {
+    let cachedData: String?
+    var savedData: String?
+
+    init(cachedData: String?) {
+        self.cachedData = cachedData
+    }
+
+    func load() -> String? {
+        cachedData
+    }
+
+    func save(_ content: String) {
+        savedData = content
     }
 }
 
