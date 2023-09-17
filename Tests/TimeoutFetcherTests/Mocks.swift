@@ -1,5 +1,5 @@
 //
-//  MockDataFetcher.swift
+//  Mocks.swift
 //
 //
 //  Created by Hugues Telolahy on 16/09/2023.
@@ -20,5 +20,13 @@ struct MockDataFetcher: DataFetcherProtocol {
             Observable.error(error)
                 .delay(delay, scheduler: MainScheduler.instance)
         }
+    }
+}
+
+class MockErrorReporter: ErrorReporterProtocol {
+    var reportedError: Error?
+
+    func reportError(_ error: Error) {
+        reportedError = error
     }
 }
