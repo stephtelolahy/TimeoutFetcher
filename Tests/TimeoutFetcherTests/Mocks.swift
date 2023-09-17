@@ -39,8 +39,8 @@ class MockLocalStorage: LocalStorageProtocol {
         cachedData
     }
 
-    func save(_ content: String) {
-        savedData = content
+    func save(_ data: String) {
+        savedData = data
     }
 }
 

@@ -7,10 +7,10 @@ final class TimeoutFetcherTests: XCTestCase {
 
     private let mockReporter = MockErrorReporter()
 
-    func test_WhenAPISucceedsBeforeTimeout_CacheSucceeds_ShouldReturnRemoteData_AndUpdateCache() throws {
+    func test_WhenAPISucceedsBeforeTimeout_ShouldReturnRemoteData_AndUpdateCache() throws {
         // Given
         let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(1))
-        let mockCache = MockLocalStorage(cachedData: "cached-data")
+        let mockCache = MockLocalStorage(cachedData: nil)
         let sut = MyService(remote: mockRemote,
                             cache: mockCache,
                             timeout: .milliseconds(2),
@@ -24,7 +24,7 @@ final class TimeoutFetcherTests: XCTestCase {
         XCTAssertEqual(mockCache.savedData, "remote-data")
     }
 
-    func test_WhenAPISucceedsAfterTimeout_CacheSucceeds_ShouldReturnCachedData_AndUpdateCache() throws {
+    func test_WhenAPISucceedsAfterTimeout_CacheSucceeds_ShouldReturnCachedData_AndUpdateCache_AndReportError() throws {
         // Given
         let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
         let mockCache = MockLocalStorage(cachedData: "cached-data")
@@ -39,9 +39,10 @@ final class TimeoutFetcherTests: XCTestCase {
         // Assert
         XCTAssertEqual(result, "cached-data")
         XCTAssertEqual(mockCache.savedData, "remote-data")
+        XCTAssertEqual(mockReporter.reportedError as? APIError, .timeout)
     }
 
-    func test_WhenAPIsucceeds_CacheFails_ShouldReturnRemoteData_AndUpdateCache() throws {
+    func test_WhenAPIsucceedsAfterTimeout_CacheFails_ShouldReturnRemoteData_AndUpdateCache_AndReportError() throws {
         // Given
         let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
         let mockCache = MockLocalStorage(cachedData: nil)
@@ -56,6 +57,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // Assert
         XCTAssertEqual(result, "remote-data")
         XCTAssertEqual(mockCache.savedData, "remote-data")
+        XCTAssertEqual(mockReporter.reportedError as? APIError, .timeout)
     }
 
     func test_WhenAPIFails_CacheSucceeds_ShouldReturnCachedData_AndReportError() throws {
