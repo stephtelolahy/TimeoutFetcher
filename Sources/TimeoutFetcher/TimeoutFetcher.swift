@@ -14,48 +14,84 @@ struct MyService: MyServiceProtocol {
     let reporter: ErrorReporterProtocol
 
     /// Set `disposeBag` as property of `MyService`
-    /// to prevent stopping remoteObservable after emitting cached data
+    /// to prevent stopping `remoteObservable` after emitting `cacheObservable`
     let disposeBag = DisposeBag()
 
     func getData() -> Observable<String> {
         //        getDataUsingAmb()
-        getDataUsingInnerSubscription()
+        getDataUsingSubscription()
     }
 
-    private func getDataUsingInnerSubscription() -> Observable<String> {
+    private func getDataUsingSubscription() -> Observable<String> {
         Observable.create { observer in
-            var cacheCompleted = false
-            var remoteCompleted = false
+            var cacheResult: Result<String, Error>?
+            var remoteResult: Result<String, Error>?
 
-            let timeoutObservable = Observable<Bool>
-                .just(true)
+            let timeoutObservable = Observable.just(())
                 .delay(timeout, scheduler: MainScheduler.instance)
+
             timeoutObservable.subscribe(onNext: { _ in
-                guard !remoteCompleted else { return }
                 if let cachedData = cache.load() {
-                    observer.onNext(cachedData)
-                    observer.onCompleted()
-                    cacheCompleted = true
+                    cacheResult = .success(cachedData)
+                    switch remoteResult {
+                    case .success:
+                        break
+                    case .failure:
+                        observer.onNext(cachedData)
+                        observer.onCompleted()
+                    case nil:
+                        observer.onNext(cachedData)
+                        observer.onCompleted()
+                    }
+
+                } else {
+                    cacheResult = .failure(CacheError.notFound)
+
+                    switch remoteResult {
+                    case .success:
+                        break
+                    case .failure(let apiError):
+                        observer.onError(apiError)
+                    case nil:
+                        break // wait for API response
+                    }
                 }
             })
             .disposed(by: disposeBag)
 
             let remoteObservable = remote.fetch()
-            remoteObservable.subscribe(
-                onNext: { data in
-                    if !cacheCompleted {
-                        observer.onNext(data)
-                        observer.onCompleted()
-                        remoteCompleted = true
-                    } else {
-                        reporter.reportError(APIError.timeout)
-                    }
+                .do(onNext: { data in
                     cache.save(data)
                 }, onError: { error in
-                    if !cacheCompleted {
-                        observer.onError(error)
-                    }
                     reporter.reportError(error)
+                })
+
+            remoteObservable.subscribe(
+                onNext: { data in
+                    remoteResult = .success(data)
+
+                    switch cacheResult {
+                    case .success:
+                        reporter.reportError(APIError.timeout)
+                    case .failure:
+                        observer.onNext(data)
+                        observer.onCompleted()
+                        reporter.reportError(APIError.timeout)
+                    case nil:
+                        observer.onNext(data)
+                        observer.onCompleted()
+                    }
+                }, onError: { error in
+                    remoteResult = .failure(error)
+
+                    switch cacheResult {
+                    case .success:
+                        break
+                    case .failure:
+                        observer.onError(error)
+                    case nil:
+                        break // wait for cache response
+                    }
                 })
             .disposed(by: disposeBag)
 
@@ -101,4 +137,8 @@ enum APIError: Error, Equatable {
     case http
     case parsing
     case timeout
+}
+
+enum CacheError: Error, Equatable {
+    case notFound
 }
