@@ -18,105 +18,32 @@ struct MyService: MyServiceProtocol {
     let disposeBag = DisposeBag()
 
     func getData() -> Observable<String> {
-        //        getDataUsingAmb()
-        getDataUsingSubscription()
-    }
-
-    private func getDataUsingSubscription() -> Observable<String> {
         Observable.create { observer in
-            var cacheResult: Result<String, Error>?
-            var remoteResult: Result<String, Error>?
 
-            let timeoutObservable = Observable.just(())
-                .delay(timeout, scheduler: MainScheduler.instance)
-
+            let timeoutObservable = Observable.just(()).delay(timeout, scheduler: MainScheduler.instance)
             timeoutObservable.subscribe(onNext: { _ in
                 if let cachedData = cache.load() {
-                    cacheResult = .success(cachedData)
-                    switch remoteResult {
-                    case .success:
-                        break
-                    case .failure:
-                        observer.onNext(cachedData)
-                        observer.onCompleted()
-                    case nil:
-                        observer.onNext(cachedData)
-                        observer.onCompleted()
-                    }
-
-                } else {
-                    cacheResult = .failure(CacheError.notFound)
-
-                    switch remoteResult {
-                    case .success:
-                        break
-                    case .failure(let apiError):
-                        observer.onError(apiError)
-                    case nil:
-                        break // wait for API response
-                    }
+                    observer.onNext(cachedData)
+                    observer.onCompleted()
+                    // reporter.reportError(APIError.timeout)
                 }
             })
             .disposed(by: disposeBag)
 
             let remoteObservable = remote.fetch()
-                .do(onNext: { data in
-                    cache.save(data)
-                }, onError: { error in
-                    reporter.reportError(error)
-                })
-
             remoteObservable.subscribe(
                 onNext: { data in
-                    remoteResult = .success(data)
-
-                    switch cacheResult {
-                    case .success:
-                        reporter.reportError(APIError.timeout)
-                    case .failure:
-                        observer.onNext(data)
-                        observer.onCompleted()
-                        reporter.reportError(APIError.timeout)
-                    case nil:
-                        observer.onNext(data)
-                        observer.onCompleted()
-                    }
+                    observer.onNext(data)
+                    observer.onCompleted()
+                    cache.save(data)
                 }, onError: { error in
-                    remoteResult = .failure(error)
-
-                    switch cacheResult {
-                    case .success:
-                        break
-                    case .failure:
-                        observer.onError(error)
-                    case nil:
-                        break // wait for cache response
-                    }
+                    observer.onError(error)
+                    reporter.reportError(error)
                 })
             .disposed(by: disposeBag)
 
             return Disposables.create()
         }
-    }
-
-    private func getDataUsingAmb() -> Observable<String> {
-        let remoteObservable = remote.fetch()
-            .do(onNext: { data in
-                cache.save(data)
-            }, onError: { error in
-                reporter.reportError(error)
-            })
-
-        let cacheObservable: Observable<String>
-        if let cachedData = cache.load() {
-            cacheObservable = Observable
-                .just(cachedData)
-                .delay(timeout, scheduler: MainScheduler.instance)
-        } else {
-            cacheObservable = Observable.never()
-        }
-
-        return Observable.amb([remoteObservable, cacheObservable])
     }
 }
 
