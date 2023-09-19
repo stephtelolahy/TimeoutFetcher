@@ -152,7 +152,6 @@ final class TimeoutFetcherTests: XCTestCase {
         // Given
         mockRemote.result = .failure(APIError.parsing)
         mockRemote.delay = .milliseconds(3)
-        mockCache.cachedData = "cached-data"
 
         // When
         let result = sut.getData().toBlocking().materialize()

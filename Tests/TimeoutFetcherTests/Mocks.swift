@@ -14,9 +14,9 @@ class MockDataFetcher: DataFetcherProtocol {
     func fetch() -> Observable<String> {
         switch result {
         case .success(let value):
-            Observable.just(value).delay(delay, scheduler: MainScheduler.instance)
+            Observable.just(value).delaySubscription(delay, scheduler: MainScheduler.instance)
         case .failure(let error):
-            Observable.error(error).delay(delay, scheduler: MainScheduler.instance)
+            Observable.error(error).delaySubscription(delay, scheduler: MainScheduler.instance)
         default:
             fatalError("undefined result")
         }
