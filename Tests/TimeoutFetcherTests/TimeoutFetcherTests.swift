@@ -149,19 +149,12 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .success("remote-data")
         mockRemote.delay = .milliseconds(3)
 
-        let expectation = XCTestExpectation(description: "updating cache")
-        var savedData: String?
-        mockCache.saveSubject.subscribe(onNext: { data in
-            savedData = data
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
-
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
-        XCTAssertEqual(savedData, "remote-data")
+        wait(for: [mockCache.saveExpectation], timeout: 1)
+        XCTAssertEqual(mockCache.savedData, "remote-data")
     }
 
     func test_WhenAPIFailsHTTP_ShouldDeleteCache() throws {
@@ -169,16 +162,11 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .failure(APIError.http)
         mockRemote.delay = .milliseconds(3)
 
-        let expectation = XCTestExpectation(description: "deleting cache")
-        mockCache.clearSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
-
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockCache.clearExpectation], timeout: 1)
     }
 
     func test_WhenAPIFailsParsing_ShouldNotDeleteCache() throws {
@@ -186,17 +174,13 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .failure(APIError.parsing)
         mockRemote.delay = .milliseconds(3)
 
-        let expectation = XCTestExpectation(description: "not deleting cache")
-        expectation.isInverted = true
-        mockCache.clearSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
+        mockCache.clearExpectation.isInverted = true
 
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockCache.clearExpectation], timeout: 1)
     }
 
     // MARK: - Reporting
@@ -206,16 +190,11 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .success("remote-data")
         mockRemote.delay = .milliseconds(3)
 
-        let expectation = XCTestExpectation(description: "reporting timeout")
-        mockReporter.reportTimeoutSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
-
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockReporter.reportTimeoutExpectation], timeout: 1)
     }
 
     func test_WhenAPIResponds_BeforeTimeout_ShouldNotReportError() throws {
@@ -223,17 +202,13 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .success("remote-data")
         mockRemote.delay = .milliseconds(1)
 
-        let expectation = XCTestExpectation(description: "not reporting timeout")
-        expectation.isInverted = true
-        mockReporter.reportTimeoutSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
+        mockReporter.reportTimeoutExpectation.isInverted = true
 
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockReporter.reportTimeoutExpectation], timeout: 1)
     }
 
     func test_WhenAPIFailsHTTP_ShouldReportError() throws {
@@ -241,16 +216,11 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .failure(APIError.http)
         mockRemote.delay = .milliseconds(1)
 
-        let expectation = XCTestExpectation(description: "reporting http error")
-        mockReporter.reportHTTPSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
-
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockReporter.reportHTTPExpectation], timeout: 1)
     }
 
     func test_WhenAPIFailsParsing_ShouldReportError() throws {
@@ -258,15 +228,10 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.result = .failure(APIError.parsing)
         mockRemote.delay = .milliseconds(1)
 
-        let expectation = XCTestExpectation(description: "reporting parsing error")
-        mockReporter.reportParsingSubject.subscribe(onNext: { _ in
-            expectation.fulfill()
-        }).disposed(by: disposeBag)
-
         // When
         _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1)
+        wait(for: [mockReporter.reportParsingExpectation], timeout: 1)
     }
 }

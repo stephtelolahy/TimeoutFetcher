@@ -6,11 +6,13 @@
 //
 @testable import TimeoutFetcher
 import RxSwift
+import Foundation
+import XCTest
 
 class MockDataFetcher: DataFetcherProtocol {
     var result: Result<String, Error>?
     var delay: RxTimeInterval = .never
-    
+
     func fetch() -> Observable<String> {
         switch result {
         case .success(let value):
@@ -25,36 +27,38 @@ class MockDataFetcher: DataFetcherProtocol {
 
 class MockLocalStorage: LocalStorageProtocol {
     var cachedData: String?
-    let saveSubject = PublishSubject<String>()
-    let clearSubject = PublishSubject<Void>()
+    let saveExpectation = XCTestExpectation(description: "save expectation")
+    let clearExpectation = XCTestExpectation(description: "clear expectation")
+    var savedData: String?
 
     func load() -> String? {
         cachedData
     }
-    
+
     func save(_ data: String) {
-        saveSubject.onNext(data)
+        savedData = data
+        saveExpectation.fulfill()
     }
 
     func clear() {
-        clearSubject.onNext(())
+        clearExpectation.fulfill()
     }
 }
 
 class MockErrorReporter: ErrorReporterProtocol {
-    let reportHTTPSubject = PublishSubject<Void>()
-    let reportParsingSubject = PublishSubject<Void>()
-    let reportTimeoutSubject = PublishSubject<Void>()
+    let reportTimeoutExpectation = XCTestExpectation(description: "reportTimeoutError expectation")
+    let reportHTTPExpectation = XCTestExpectation(description: "reportHTTPError expectation")
+    let reportParsingExpectation = XCTestExpectation(description: "reportParsingError expectation")
 
     func reportHTTPError() {
-        reportHTTPSubject.onNext(())
+        reportHTTPExpectation.fulfill()
     }
 
     func reportParsingError() {
-        reportParsingSubject.onNext(())
+        reportParsingExpectation.fulfill()
     }
 
     func reportTimeoutError() {
-        reportTimeoutSubject.onNext(())
+        reportTimeoutExpectation.fulfill()
     }
 }
