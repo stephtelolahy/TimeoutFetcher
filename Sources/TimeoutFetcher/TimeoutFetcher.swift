@@ -37,7 +37,14 @@ struct MyService: MyServiceProtocol {
                     observer.onCompleted()
                     cache.save(data)
                 }, onError: { error in
-                    observer.onError(error)
+                    if let apiError = error as? APIError, 
+                        case .parsing = apiError,
+                       let cachedData = cache.load() {
+                        observer.onNext(cachedData)
+                        observer.onCompleted()
+                    } else {
+                        observer.onError(error)
+                    }
                     reporter.reportError(error)
                 })
             .disposed(by: disposeBag)

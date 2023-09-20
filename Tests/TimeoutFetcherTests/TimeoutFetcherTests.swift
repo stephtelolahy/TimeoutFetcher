@@ -25,7 +25,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "remote-data")
     }
 
@@ -36,28 +36,22 @@ final class TimeoutFetcherTests: XCTestCase {
         mockCache.cachedData = "cached-data"
 
         // When
-        let result = sut.getData().toBlocking().materialize()
-
-        // Assert
-        switch result {
-        case .completed:
-            XCTFail("Expected result to complete with error")
-        case .failed(let elements, let error):
-            XCTAssertEqual(elements, [])
+        // Then
+        XCTAssertThrowsError(try sut.getData().toBlocking().toArray()) { error in
             XCTAssertEqual(error as? APIError, .http)
         }
     }
 
     func test_WhenAPIFailsParsing_BeforeTimeout_CacheSucceeds_ShouldReturnCachedData() throws {
         // Given
-        mockRemote.result = .failure(APIError.http)
+        mockRemote.result = .failure(APIError.parsing)
         mockRemote.delay = .milliseconds(1)
         mockCache.cachedData = "cached-data"
 
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "cached-data")
     }
 
@@ -67,14 +61,8 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.delay = .milliseconds(1)
 
         // When
-        let result = sut.getData().toBlocking().materialize()
-
-        // Assert
-        switch result {
-        case .completed:
-            XCTFail("Expected result to complete with error")
-        case .failed(let elements, let error):
-            XCTAssertEqual(elements, [])
+        // Then
+        XCTAssertThrowsError(try sut.getData().toBlocking().toArray()) { error in
             XCTAssertEqual(error as? APIError, .parsing)
         }
     }
@@ -88,7 +76,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "cached-data")
     }
 
@@ -100,7 +88,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "remote-data")
     }
 
@@ -113,7 +101,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "cached-data")
     }
 
@@ -123,14 +111,8 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.delay = .milliseconds(3)
 
         // When
-        let result = sut.getData().toBlocking().materialize()
-
-        // Assert
-        switch result {
-        case .completed:
-            XCTFail("Expected result to complete with error")
-        case .failed(let elements, let error):
-            XCTAssertEqual(elements, [])
+        // Then
+        XCTAssertThrowsError(try sut.getData().toBlocking().toArray()) { error in
             XCTAssertEqual(error as? APIError, .http)
         }
     }
@@ -144,7 +126,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         let result = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         XCTAssertEqual(result, "cached-data")
     }
 
@@ -154,14 +136,8 @@ final class TimeoutFetcherTests: XCTestCase {
         mockRemote.delay = .milliseconds(3)
 
         // When
-        let result = sut.getData().toBlocking().materialize()
-
-        // Assert
-        switch result {
-        case .completed:
-            XCTFail("Expected result to complete with error")
-        case .failed(let elements, let error):
-            XCTAssertEqual(elements, [])
+        // Then
+        XCTAssertThrowsError(try sut.getData().toBlocking().toArray()) { error in
             XCTAssertEqual(error as? APIError, .parsing)
         }
     }
@@ -187,7 +163,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(savedData, "remote-data")
     }
@@ -210,7 +186,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(savedData, "remote-data")
     }
@@ -233,7 +209,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(savedData, "remote-data")
     }
@@ -259,7 +235,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(reportedError as? APIError, .timeout)
     }
@@ -283,7 +259,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(reportedError as? APIError, .timeout)
     }
@@ -307,7 +283,7 @@ final class TimeoutFetcherTests: XCTestCase {
         // When
         _ = try sut.getData().toBlocking().first()
 
-        // Assert
+        // Then
         wait(for: [expectation], timeout: 1.0)
         XCTAssertEqual(reportedError as? APIError, .parsing)
     }
