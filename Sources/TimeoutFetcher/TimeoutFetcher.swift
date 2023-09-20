@@ -37,13 +37,17 @@ struct MyService: MyServiceProtocol {
                     observer.onCompleted()
                     cache.save(data)
                 }, onError: { error in
-                    if let apiError = error as? APIError, 
-                        case .parsing = apiError,
-                       let cachedData = cache.load() {
-                        observer.onNext(cachedData)
-                        observer.onCompleted()
+                    if let apiError = error as? APIError,
+                       case .parsing = apiError {
+                        if let cachedData = cache.load() {
+                            observer.onNext(cachedData)
+                            observer.onCompleted()
+                        } else {
+                            observer.onError(error)
+                        }
                     } else {
                         observer.onError(error)
+                        cache.clear()
                     }
                     reporter.reportError(error)
                 })
@@ -61,6 +65,7 @@ protocol DataFetcherProtocol {
 protocol LocalStorageProtocol {
     func load() -> String?
     func save(_ content: String)
+    func clear()
 }
 
 protocol ErrorReporterProtocol {

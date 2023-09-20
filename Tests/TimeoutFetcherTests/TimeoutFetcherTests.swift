@@ -9,9 +9,9 @@ final class TimeoutFetcherTests: XCTestCase {
     private let mockCache = MockLocalStorage()
     private let mockReporter = MockErrorReporter()
     private lazy var sut = MyService(remote: mockRemote,
-                                cache: mockCache,
-                                timeout: .milliseconds(2),
-                                reporter: MockErrorReporter())
+                                     cache: mockCache,
+                                     timeout: .milliseconds(2),
+                                     reporter: MockErrorReporter())
     private let disposeBag = DisposeBag()
 
     // MARK: - Result
@@ -142,77 +142,64 @@ final class TimeoutFetcherTests: XCTestCase {
         }
     }
 
-    /*
     // MARK: - Caching
 
-    func test_WhenAPISucceedsBeforeTimeout_ShouldUpdateCache() throws {
+    func test_WhenAPISucceeds_ShouldUpdateCache() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(1))
-        let mockCache = MockLocalStorage(cachedData: "cached-data")
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(2),
-                            reporter: MockErrorReporter())
-        let expectation = XCTestExpectation(description: "caching")
+        mockRemote.result = .success("remote-data")
+        mockRemote.delay = .milliseconds(3)
+
+        let expectation = XCTestExpectation(description: "updating cache")
         var savedData: String?
-        mockCache.savedData.subscribe(onNext: { data in
+        mockCache.saveSubject.subscribe(onNext: { data in
             savedData = data
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 1)
         XCTAssertEqual(savedData, "remote-data")
     }
 
-    func test_WhenAPISucceedsAfterTimeout_ShouldUpdateCache() throws {
+    func test_WhenAPIFailsHTTP_ShouldDeleteCache() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
-        let mockCache = MockLocalStorage(cachedData: "cached-data")
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(10),
-                            reporter: MockErrorReporter())
-        let expectation = XCTestExpectation(description: "caching")
-        var savedData: String?
-        mockCache.savedData.subscribe(onNext: { data in
-            savedData = data
+        mockRemote.result = .failure(APIError.http)
+        mockRemote.delay = .milliseconds(3)
+
+        let expectation = XCTestExpectation(description: "deleting cache")
+        mockCache.clearSubject.subscribe(onNext: { _ in
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(savedData, "remote-data")
+        wait(for: [expectation], timeout: 1)
     }
 
-    func test_WhenAPIsucceedsAfterTimeout_CacheFails_ShouldUpdateCache() throws {
+    func test_WhenAPIFailsParsing_ShouldNotDeleteCache() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
-        let mockCache = MockLocalStorage(cachedData: nil)
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(10),
-                            reporter: MockErrorReporter())
-        let expectation = XCTestExpectation(description: "caching")
-        var savedData: String?
-        mockCache.savedData.subscribe(onNext: { data in
-            savedData = data
+        mockRemote.result = .failure(APIError.parsing)
+        mockRemote.delay = .milliseconds(3)
+
+        let expectation = XCTestExpectation(description: "not deleting cache")
+        expectation.isInverted = true
+        mockCache.clearSubject.subscribe(onNext: { _ in
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(savedData, "remote-data")
+        wait(for: [expectation], timeout: 1)
     }
+
+    /*
 
     // MARK: - Reporting
 

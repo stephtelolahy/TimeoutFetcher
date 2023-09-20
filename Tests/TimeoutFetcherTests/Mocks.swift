@@ -25,14 +25,19 @@ class MockDataFetcher: DataFetcherProtocol {
 
 class MockLocalStorage: LocalStorageProtocol {
     var cachedData: String?
-    let savedData = PublishSubject<String>()
-    
+    let saveSubject = PublishSubject<String>()
+    let clearSubject = PublishSubject<Void>()
+
     func load() -> String? {
         cachedData
     }
     
     func save(_ data: String) {
-        savedData.onNext(data)
+        saveSubject.onNext(data)
+    }
+
+    func clear() {
+        clearSubject.onNext(())
     }
 }
 
