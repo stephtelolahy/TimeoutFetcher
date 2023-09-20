@@ -42,9 +42,19 @@ class MockLocalStorage: LocalStorageProtocol {
 }
 
 class MockErrorReporter: ErrorReporterProtocol {
-    let reportedError = PublishSubject<Error>()
-    
-    func reportError(_ error: Error) {
-        reportedError.onNext(error)
+    let reportHTTPSubject = PublishSubject<Void>()
+    let reportParsingSubject = PublishSubject<Void>()
+    let reportTimeoutSubject = PublishSubject<Void>()
+
+    func reportHTTPError() {
+        reportHTTPSubject.onNext(())
+    }
+
+    func reportParsingError() {
+        reportParsingSubject.onNext(())
+    }
+
+    func reportTimeoutError() {
+        reportTimeoutSubject.onNext(())
     }
 }

@@ -19,13 +19,17 @@ struct MyService: MyServiceProtocol {
 
     func getData() -> Observable<String> {
         Observable.create { observer in
+            var remoteCompleted = false
 
             let timeoutObservable = Observable.just(()).delay(timeout, scheduler: MainScheduler.instance)
             timeoutObservable.subscribe(onNext: { _ in
                 if let cachedData = cache.load() {
                     observer.onNext(cachedData)
                     observer.onCompleted()
-                    // reporter.reportError(APIError.timeout)
+                }
+
+                if !remoteCompleted {
+                    reporter.reportTimeoutError()
                 }
             })
             .disposed(by: disposeBag)
@@ -45,11 +49,15 @@ struct MyService: MyServiceProtocol {
                         } else {
                             observer.onError(error)
                         }
+                        reporter.reportParsingError()
+
                     } else {
                         observer.onError(error)
                         cache.clear()
+                        reporter.reportHTTPError()
                     }
-                    reporter.reportError(error)
+                }, onCompleted: {
+                    remoteCompleted = true
                 })
             .disposed(by: disposeBag)
 
@@ -69,15 +77,12 @@ protocol LocalStorageProtocol {
 }
 
 protocol ErrorReporterProtocol {
-    func reportError(_ error: Error)
+    func reportHTTPError()
+    func reportParsingError()
+    func reportTimeoutError()
 }
 
 enum APIError: Error, Equatable {
     case http
     case parsing
-    case timeout
-}
-
-enum CacheError: Error, Equatable {
-    case notFound
 }

@@ -199,80 +199,74 @@ final class TimeoutFetcherTests: XCTestCase {
         wait(for: [expectation], timeout: 1)
     }
 
-    /*
-
     // MARK: - Reporting
 
-    func test_WhenAPISucceedsAfterTimeout_CacheSucceeds_ShouldReportError() throws {
+    func test_WhenAPIResponds_AfterTimeout_ShouldReportError() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
-        let mockCache = MockLocalStorage(cachedData: "cached-data")
-        let mockReporter = MockErrorReporter()
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(10),
-                            reporter: mockReporter)
-        let expectation = XCTestExpectation(description: "reporting")
-        var reportedError: Error?
-        mockReporter.reportedError.subscribe(onNext: { error in
-            reportedError = error
+        mockRemote.result = .success("remote-data")
+        mockRemote.delay = .milliseconds(3)
+
+        let expectation = XCTestExpectation(description: "reporting timeout")
+        mockReporter.reportTimeoutSubject.subscribe(onNext: { _ in
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(reportedError as? APIError, .timeout)
+        wait(for: [expectation], timeout: 1)
     }
 
-    func test_WhenAPIsucceedsAfterTimeout_CacheFails_ShouldReportError() throws {
+    func test_WhenAPIResponds_BeforeTimeout_ShouldNotReportError() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .success("remote-data"), delay: .milliseconds(2))
-        let mockCache = MockLocalStorage(cachedData: nil)
-        let mockReporter = MockErrorReporter()
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(10),
-                            reporter: mockReporter)
-        let expectation = XCTestExpectation(description: "reporting")
-        var reportedError: Error?
-        mockReporter.reportedError.subscribe(onNext: { error in
-            reportedError = error
+        mockRemote.result = .success("remote-data")
+        mockRemote.delay = .milliseconds(1)
+
+        let expectation = XCTestExpectation(description: "not reporting timeout")
+        expectation.isInverted = true
+        mockReporter.reportTimeoutSubject.subscribe(onNext: { _ in
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(reportedError as? APIError, .timeout)
+        wait(for: [expectation], timeout: 1)
     }
 
-    func test_WhenAPIFails_ShouldReportError() throws {
+    func test_WhenAPIFailsHTTP_ShouldReportError() throws {
         // Given
-        let mockRemote = MockDataFetcher(result: .failure(APIError.parsing))
-        let mockCache = MockLocalStorage(cachedData: "cached-data")
-        let mockReporter = MockErrorReporter()
-        let sut = MyService(remote: mockRemote,
-                            cache: mockCache,
-                            timeout: .milliseconds(10),
-                            reporter: mockReporter)
-        let expectation = XCTestExpectation(description: "reporting")
-        var reportedError: Error?
-        mockReporter.reportedError.subscribe(onNext: { error in
-            reportedError = error
+        mockRemote.result = .failure(APIError.http)
+        mockRemote.delay = .milliseconds(1)
+
+        let expectation = XCTestExpectation(description: "reporting http error")
+        mockReporter.reportHTTPSubject.subscribe(onNext: { _ in
             expectation.fulfill()
         }).disposed(by: disposeBag)
 
         // When
-        _ = try sut.getData().toBlocking().first()
+        _ = sut.getData().toBlocking().materialize()
 
         // Then
-        wait(for: [expectation], timeout: 1.0)
-        XCTAssertEqual(reportedError as? APIError, .parsing)
+        wait(for: [expectation], timeout: 1)
     }
-     */
+
+    func test_WhenAPIFailsParsing_ShouldReportError() throws {
+        // Given
+        mockRemote.result = .failure(APIError.parsing)
+        mockRemote.delay = .milliseconds(1)
+
+        let expectation = XCTestExpectation(description: "reporting parsing error")
+        mockReporter.reportParsingSubject.subscribe(onNext: { _ in
+            expectation.fulfill()
+        }).disposed(by: disposeBag)
+
+        // When
+        _ = sut.getData().toBlocking().materialize()
+
+        // Then
+        wait(for: [expectation], timeout: 1)
+    }
 }
