@@ -11,7 +11,7 @@ final class TimeoutFetcherTests: XCTestCase {
     private lazy var sut = MyService(remote: mockRemote,
                                      cache: mockCache,
                                      timeout: .milliseconds(2),
-                                     reporter: MockErrorReporter())
+                                     reporter: mockReporter)
     private let disposeBag = DisposeBag()
 
     // MARK: - Result
